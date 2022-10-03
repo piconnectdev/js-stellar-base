@@ -11,12 +11,12 @@ SDK maintainers should follow [semantic versioning](https://semver.org/) best pr
 
 Use your best judgement when deciding on when to craft a release: maybe enough changes have accumulated to warrant a release, maybe there's a high-urgency fix that needs to be published immediately, or maybe you can put it off for a particular feature. It's all dependent on what else is going on.
 
-As you probably already know, there are two main components to the JavaScript SDK environment: the `stellar-base` package (this repo) and the higher-level `stellar-sdk` package that relies on this one as a dependency. Care should be taken when updating either, as there are quite a few small steps that can go wrong.
+As you probably already know, there are two main components to the JavaScript SDK environment: the `stellar-base` package (this repo) and the higher-level `stellar-sdk` package (from [here](https://github.com/stellar/js-stellar-sdk)) that relies on this one as a dependency. Care should be taken when updating either, as there are quite a few small steps that can get overlooked.
 
 ### Updating Base
 Once all of the PRs for a particular release are in, it's time to actually publish & deploy a new version.
 
- - [ ] Create a new branch with the new version, e.g. `git switch -c v1.0.0`
+ - [ ] Create a new branch with the new version, e.g. `git switch -C v1.0.0`
 
  - [ ] First, look at the diff between the latest release and master: e.g. https://github.com/stellar/js-stellar-base/compare/v5.1.0...master. Replace `v5.1.0` here with the [latest release](https://github.com/stellar/js-stellar-base/releases/latest).
 
@@ -24,11 +24,11 @@ Once all of the PRs for a particular release are in, it's time to actually publi
 
  - [ ] Update the top-level `"version"` field in the [package.json](./package.json) file to reflect the new version.
 
- - [ ] Run the final sanity check to ensure the builds pass: `yarn dtslint && yarn test && yarn preversion`.
+ - [ ] Run the final sanity check to ensure the builds pass: `yarn dtslint && yarn test && yarn preversion`. The first command checks that you have Typescript compatibility (one of the most common sources of bugs, since this library is written purely in JS but must be usable from TS).
 
  - [ ] Commit & push your branch, then [create a PR](https://github.com/stellar/js-stellar-base/compare).
 
- - [ ] Once approved, merge it and then [create a new release](https://github.com/stellar/js-stellar-base/releases/new), using the same version as you did for the branch; let GitHub create the tag for you. In the description for the release, paste in the relevant parts of the [CHANGELOG](./CHANGELOG.md).
+ - [ ] Once approved, merge it and then [create a new release](https://github.com/stellar/js-stellar-base/releases/new), using the same version as you did for the branch; **let GitHub create the tag for you**. In the description for the release, paste in the relevant parts of the [CHANGELOG](./CHANGELOG.md).
 
  - [ ] Once the release has been created and the build succeeds, the new version should be deployed to `npm` and accessible to all. You can watch this yourself, either via the [`npm` page](https://www.npmjs.com/package/stellar-base) or from the command line:
 

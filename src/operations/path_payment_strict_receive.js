@@ -1,21 +1,31 @@
-import xdr from '../generated/stellar-xdr_generated';
+import xdr from '../xdr';
 import { decodeAddressToMuxedAccount } from '../util/decode_encode_muxed_account';
 
 /**
- * Returns a XDR PathPaymentStrictReceiveOp. A `PathPaymentStrictReceive` operation send the specified amount to the
- * destination account, optionally through a path. XLM payments create the destination
- * account if it does not exist.
+ * Creates a PathPaymentStrictReceive operation.
+ *
+ * A `PathPaymentStrictReceive` operation sends the specified amount to the
+ * destination account. It credits the destination with `destAmount` of
+ * `destAsset`, while debiting at most `sendMax` of `sendAsset` from the source.
+ * The transfer optionally occurs through a path. XLM payments create the
+ * destination account if it does not exist.
+ *
  * @function
  * @alias Operation.pathPaymentStrictReceive
- * @param {object} opts Options object
- * @param {Asset} opts.sendAsset - The asset to pay with.
- * @param {string} opts.sendMax - The maximum amount of sendAsset to send.
- * @param {string} opts.destination - The destination account to send to.
- * @param {Asset} opts.destAsset - The asset the destination will receive.
- * @param {string} opts.destAmount - The amount the destination receives.
- * @param {Asset[]} opts.path - An array of Asset objects to use as the path.
- * @param {string} [opts.source] - The source account for the payment. Defaults to the transaction's source account.
- * @returns {xdr.PathPaymentStrictReceiveOp} Path Payment Strict Receive operation
+ * @see https://developers.stellar.org/docs/start/list-of-operations/#path-payment-strict-receive
+ *
+ * @param {object}  opts - Options object
+ * @param {Asset}   opts.sendAsset    - asset to pay with
+ * @param {string}  opts.sendMax      - maximum amount of sendAsset to send
+ * @param {string}  opts.destination  - destination account to send to
+ * @param {Asset}   opts.destAsset    - asset the destination will receive
+ * @param {string}  opts.destAmount   - amount the destination receives
+ * @param {Asset[]} opts.path         - array of Asset objects to use as the path
+ *
+ * @param {string}  [opts.source]     - The source account for the payment.
+ *     Defaults to the transaction's source account.
+ *
+ * @returns {xdr.PathPaymentStrictReceiveOp} the resulting path payment op
  */
 export function pathPaymentStrictReceive(opts) {
   switch (true) {
@@ -34,7 +44,6 @@ export function pathPaymentStrictReceive(opts) {
   const attributes = {};
   attributes.sendAsset = opts.sendAsset.toXDRObject();
   attributes.sendMax = this._toXDRAmount(opts.sendMax);
-
   try {
     attributes.destination = decodeAddressToMuxedAccount(opts.destination);
   } catch (e) {

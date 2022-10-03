@@ -1,16 +1,22 @@
-import xdr from '../generated/stellar-xdr_generated';
+import xdr from '../xdr';
 import { decodeAddressToMuxedAccount } from '../util/decode_encode_muxed_account';
 
 /**
  * Create a payment operation.
+ *
  * @function
  * @alias Operation.payment
- * @param {object} opts Options object
- * @param {string} opts.destination - The destination account ID.
- * @param {Asset} opts.asset - The asset to send.
- * @param {string} opts.amount - The amount to send.
- * @param {string} [opts.source] - The source account for the payment. Defaults to the transaction's source account.
- * @returns {xdr.PaymentOp} Payment operation
+ * @see https://developers.stellar.org/docs/start/list-of-operations/#payment
+ *
+ * @param {object}  opts - Options object
+ * @param {string}  opts.destination  - destination account ID
+ * @param {Asset}   opts.asset        - asset to send
+ * @param {string}  opts.amount       - amount to send
+ *
+ * @param {string}  [opts.source]     - The source account for the payment.
+ *     Defaults to the transaction's source account.
+ *
+ * @returns {xdr.Operation}   The resulting payment operation (xdr.PaymentOp)
  */
 export function payment(opts) {
   if (!opts.asset) {

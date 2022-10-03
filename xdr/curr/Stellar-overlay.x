@@ -22,6 +22,11 @@ struct Error
     string msg<100>;
 };
 
+struct SendMore
+{
+    uint32 numMessages;
+};
+
 struct AuthCert
 {
     Curve25519Public pubkey;
@@ -69,6 +74,7 @@ struct PeerAddress
     uint32 numFailures;
 };
 
+// Next ID: 18
 enum MessageType
 {
     ERROR_MSG = 0,
@@ -80,6 +86,7 @@ enum MessageType
 
     GET_TX_SET = 6, // gets a particular txset by hash
     TX_SET = 7,
+    GENERALIZED_TX_SET = 17,
 
     TRANSACTION = 8, // pass on a tx you have heard about
 
@@ -93,7 +100,9 @@ enum MessageType
     HELLO = 13,
 
     SURVEY_REQUEST = 14,
-    SURVEY_RESPONSE = 15
+    SURVEY_RESPONSE = 15,
+
+    SEND_MORE = 16
 };
 
 struct DontHave
@@ -195,6 +204,8 @@ case GET_TX_SET:
     uint256 txSetHash;
 case TX_SET:
     TransactionSet txSet;
+case GENERALIZED_TX_SET:
+    GeneralizedTransactionSet generalizedTxSet;
 
 case TRANSACTION:
     TransactionEnvelope transaction;
@@ -214,6 +225,8 @@ case SCP_MESSAGE:
     SCPEnvelope envelope;
 case GET_SCP_STATE:
     uint32 getSCPLedgerSeq; // ledger seq requested ; if 0, requests the latest
+case SEND_MORE:
+    SendMore sendMoreMessage;
 };
 
 union AuthenticatedMessage switch (uint32 v)

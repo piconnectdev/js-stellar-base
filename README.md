@@ -1,6 +1,6 @@
 # JS Stellar Base
 
-[![Build Status](https://travis-ci.com/stellar/js-stellar-base.svg?branch=master)](https://travis-ci.com/stellar/js-stellar-base)
+[![Tests](https://github.com/stellar/js-stellar-base/actions/workflows/tests.yml/badge.svg)](https://github.com/stellar/js-stellar-base/actions/workflows/tests.yml)
 [![Code Climate](https://codeclimate.com/github/stellar/js-stellar-base/badges/gpa.svg)](https://codeclimate.com/github/stellar/js-stellar-base)
 [![Coverage Status](https://coveralls.io/repos/stellar/js-stellar-base/badge.svg?branch=master&service=github)](https://coveralls.io/github/stellar/js-stellar-base?branch=master)
 [![Dependency Status](https://david-dm.org/stellar/js-stellar-base.svg)](https://david-dm.org/stellar/js-stellar-base)
@@ -12,11 +12,13 @@ implementation in JavaScript that can be used on either Node.js or web browsers.
 
 - **[API Reference](https://stellar.github.io/js-stellar-base/)**
 
-> **Warning!** Node version of this package is using [`sodium-native`](https://www.npmjs.com/package/sodium-native) package, a native implementation of [Ed25519](https://ed25519.cr.yp.to/) in Node.js, as an [optional dependency](https://docs.npmjs.com/files/package.json#optionaldependencies).
+> **Warning!** The Node version of this package uses the [`sodium-native`](https://www.npmjs.com/package/sodium-native) package, a native implementation of [Ed25519](https://ed25519.cr.yp.to/) in Node.js, as an [optional dependency](https://docs.npmjs.com/files/package.json#optionaldependencies).
 > This means that if for any reason installation of this package fails, `stellar-base` will fallback to the much slower implementation contained in [`tweetnacl`](https://www.npmjs.com/package/tweetnacl).
->
-> If you are using `stellar-base` in a browser you can ignore this. However, for production backend deployments you should definitely be using `sodium-native`.
-> If `sodium-native` is successfully installed and working
+> 
+> If you'd explicitly prefer **not** to install the `sodium-native` package, pass the appropriate flag to skip optional dependencies when installing this package (e.g. `--no-optional` if using `npm install` or `--without-optional` using `yarn install`).
+> 
+> If you are using `stellar-base` in a browser you can ignore this. However, for production backend deployments you should most likely be using `sodium-native`.
+> If `sodium-native` is successfully installed and working,
 > `StellarBase.FastSigning` variable will be equal `true`. Otherwise it will be
 > `false`.
 
@@ -96,9 +98,9 @@ Make sure that you are using the latest version number. They can be found on the
 
 ### To develop and test js-stellar-base itself
 
-1. Install Node 10.16.3
+1. Install Node 14.x
 
-Because we support earlier versions of Node, please install and develop on Node 10.16.3 so you don't get surprised when your code works locally but breaks in CI.
+We support the oldest LTS release of Node, which is [currently 14.x](https://nodejs.org/en/about/releases/). Please likewise install and develop on Node 14 so you don't get surprised when your code works locally but breaks in CI.
 
 If you work on several projects that use different Node versions, you might find helpful to install a nodejs version manager.
 
@@ -139,37 +141,8 @@ versions.)
 
 #### Updating XDR definitions
 
-1. Make sure you have [Ruby](https://www.ruby-lang.org/en/) installed. You can
-   either use a global installation, or use a version manager.
-
-- https://www.ruby-lang.org/en/downloads/
-- https://github.com/rbenv/rbenv
-- https://rvm.io
-- https://github.com/asdf-vm/asdf
-
-2. Install [Bundler](https://bundler.io).
-3. Install all dependencies.
-4. Copy xdr files from
-   https://github.com/stellar/stellar-core/tree/master/src/xdr to `./xdr`.
-5. Run `yarn xdr` from the js-stellar-base folder.
-6. Transform the newly-generated JS into TypeScript using [dts-xdr](https://github.com/stellar/dts-xdr):
-
-To "scriptify" the above instructions, here are the steps one by one:
-
-```bash
-git clone https://github.com/stellar/js-stellar-base
-cd js-stellar-base
-bundle install
-yarn
-yarn xdr
-
-# If src/generated/stellar-xdr_generated.js changed, then:
-git clone https://github.com/stellar/dts-xdr
-cd dts-xdr
-stellar-xdr_generated.d.ts npx jscodeshift -t src/transform.js ../src/generated/stellar-xdr_generated.js
-cp stellar-xdr_generated.d.ts ../types/xdr.d.ts
-cd .. && rm -rf dts-xdr
-```
+1. Make sure you have [Docker](https://www.docker.com/) installed and running.
+2. `make reset-xdr`
 
 ## Usage
 
@@ -193,9 +166,8 @@ gulp test:browser
 
 You can also run `yarn test` for a simpler subset of the test cases.
 
-Tests are also run on the
-[Travis CI js-stellar-base project](https://travis-ci.org/stellar/js-stellar-base)
-automatically.
+Tests are also run automatically in Github Actions for every master commit and
+pull request.
 
 ## Documentation
 
@@ -212,9 +184,9 @@ contribute to this project.
 npm version [<newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease]
 ```
 
-A new version will be published to npm **and** Bower by Travis CI.
+A new version will be published to npm **and** Bower by GitHub Actions.
 
-npm >=2.13.0 required. Read more about
+npm >= 2.13.0 required. Read more about
 [npm version](https://docs.npmjs.com/cli/version).
 
 ## License

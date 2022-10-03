@@ -1,6 +1,281 @@
 # Changelog
 
+
 ## Unreleased
+
+
+## [v8.2.0](https://github.com/stellar/js-stellar-base/compare/v8.1.0..v8.2.0)
+
+### Add
+
+* `Operation.setOptions` now supports the new [CAP-40](https://stellar.org/protocol/cap-40) signed payload signer (`ed25519SignedPayload`) thanks to @orbitlens ([#542](https://github.com/stellar/js-stellar-base/pull/542)).
+
+
+## [v8.1.0](https://github.com/stellar/js-stellar-base/compare/v8.0.1..v8.1.0)
+
+### Add 
+
+* `TransactionBase.addDecoratedSignature` is a clearer way to add signatures directly to a built transaction without fiddling with the underlying `signatures` array ([#535](https://github.com/stellar/js-stellar-base/pull/535)).
+
+* Update the XDR definitions (and the way in which they're generated) to contain both the latest current XDR (which introduces [CAP-42](https://stellar.org/protocol/cap-42)) and the "v-next" XDR (which contains XDR related to Soroban and should be considered unstable) ([#537](https://github.com/stellar/js-stellar-base/pull/537)).
+
+### Fix
+
+* Correctly set `minAccountSequence` in `TransactionBuilder` for large values ([#539](https://github.com/stellar/js-stellar-base/pull/539), thank you @overcat!).
+
+
+## [v8.0.1](https://github.com/stellar/js-stellar-base/compare/v8.0.0..v8.0.1)
+
+### Fix
+
+- Correctly predict claimable balance IDs with large sequence numbers ([#530](https://github.com/stellar/js-stellar-base/pull/530), thank you @overcat!).
+
+
+## [v8.0.0](https://github.com/stellar/js-stellar-base/compare/v7.0.0..v8.0.0)
+
+This is a promotion from the beta version without changes, now that the CAP-21 and CAP-40 implementations have made it into [stellar/stellar-core#master](https://github.com/stellar/stellar-core/tree/master/).
+
+
+## [v8.0.0-beta.0](https://github.com/stellar/js-stellar-base/compare/v7.0.0..v8.0.0-beta.0)
+
+**This release adds support for Protocol 19**, which includes [CAP-21](https://stellar.org/protocol/cap-21) (new transaction preconditions) and [CAP-40](https://stellar.org/protocol/cap-40) (signed payload signers).
+
+This is considered a beta release until the XDR for the Stellar protocol stabilizes and is officially released.
+
+### Breaking
+
+As of this release, the minimum supported version of NodeJS is **14.x**.
+
+- Two XDR types have been renamed:
+  * `xdr.OperationId` is now `xdr.HashIdPreimage`
+  * `xdr.OperationIdId` is now `xdr.HashIdPreimageOperationId`
+
+### Add
+
+- Support for converting signed payloads ([CAP-40](https://stellar.org/protocol/cap-40)) to and from their StrKey (`P...`) representation ([#511](https://github.com/stellar/js-stellar-base/pull/511)):
+  * `Keypair.signPayloadDecorated(data)`
+  * `StrKey.encodeSignedPayload(buf)`
+  * `StrKey.decodeSignedPayload(str)`
+  * `StrKey.isValidSignedPayload(str)`
+
+- Support for creating transactions with the new preconditions ([CAP-21](https://stellar.org/protocol/cap-21)) via `TransactionBuilder` ([#513](https://github.com/stellar/js-stellar-base/pull/513)).
+
+- A way to convert between addresses (like `G...` and `P...`, i.e. the `StrKey` class) and their respective signer keys (i.e. `xdr.SignerKey`s), particularly for use in the new transaction preconditions ([#520](https://github.com/stellar/js-stellar-base/pull/520)):
+  * `SignerKey.decodeAddress(address)`
+  * `SignerKey.encodeSignerKey(address)`
+  * `TransactionBuilder.setTimebounds(min, max)`
+  * `TransactionBuilder.setLedgerbounds(min, max)`
+  * `TransactionBuilder.setMinAccountSequence(seq)`
+  * `TransactionBuilder.setMinAccountSequenceAge(age)`
+  * `TransactionBuilder.setMinAccountSequenceLedgerGap(gap)`
+  * `TransactionBuilder.setExtraSigners([signers])`
+
+### Fix
+
+- Correct a TypeScript definition on the `RevokeLiquidityPoolSponsorship` operation ([#522](https://github.com/stellar/js-stellar-base/pull/522)).
+
+- Resolves a bug that incorrectly sorted `Asset`s with mixed-case asset codes (it preferred lowercase codes incorrectly) ([#516](https://github.com/stellar/js-stellar-base/pull/516)).
+
+- Update developer dependencies:
+  * `isparta`, `jsdoc`, and `underscore` ([#500](https://github.com/stellar/js-stellar-base/pull/500))
+  * `ajv` ([#503](https://github.com/stellar/js-stellar-base/pull/503))
+  * `karma` ([#505](https://github.com/stellar/js-stellar-base/pull/505))
+  * `minimist` ([#514](https://github.com/stellar/js-stellar-base/pull/514))
+
+
+## [v7.0.0](https://github.com/stellar/js-stellar-base/compare/v6.0.6..v7.0.0)
+
+This release introduces **unconditional support for muxed accounts** ([#485](https://github.com/stellar/js-stellar-base/pull/485)).
+
+### Breaking Changes
+
+In [v5.2.0](https://github.com/stellar/js-stellar-base/releases/tag/v5.2.0), we introduced _opt-in_ support for muxed accounts, where you would need to explicitly pass a `true` flag if you wanted to interpret muxed account objects as muxed addresses (in the form `M...`, see [SEP-23](https://stellar.org/protocol/sep-23)). We stated that this would become the default in the future. That is now the case.
+
+The following fields will now always support muxed properties:
+
+  * `FeeBumpTransaction.feeSource`
+  * `Transaction.sourceAccount`
+  * `Operation.sourceAccount`
+  * `Payment.destination`
+  * `PathPaymentStrictReceive.destination`
+  * `PathPaymentStrictSend.destination`
+  * `AccountMerge.destination`
+  * `Clawback.from`
+
+The following functions had a `withMuxing` parameter removed:
+
+  - `Operation.fromXDRObject`
+  - `Transaction.constructor`
+  - `FeeBumpTransaction.constructor`
+  - `TransactionBuilder.fromXDR`
+  - `TransactionBuilder.buildFeeBumpTransaction`
+
+The following functions will no longer check the `opts` object for a `withMuxing` field:
+
+  - `TransactionBuilder.constructor`
+  - `Operation.setSourceAccount`
+
+There are several other breaking changes:
+
+  - `TransactionBuilder.enableMuxedAccounts()` is removed
+  - `decodeAddressToMuxedAccount()` and `encodeMuxedAccountToAddress()` no longer accept a second boolean parameter
+  - `Account.createSubaccount()` and `MuxedAccount.createSubaccount()` are removed ([#487](https://github.com/stellar/js-stellar-base/pull/487)). You should prefer to create them manually:
+
+```js
+  let mux1 = new MuxedAccount(someAccount, '1');
+
+  // before:
+  let mux2 = mux1.createSubaccount('2');
+
+  // now:
+  let mux2 = new MuxedAccount(mux1.baseAccount(), '2');
+```
+
+
+ - Introduced a new helper method to help convert from muxed account addresses to their underlying Stellar addresses ([#485](https://github.com/stellar/js-stellar-base/pull/485)):
+
+```ts
+function extractBaseAddess(address: string): string;
+```
+
+ - The following muxed account validation functions are now available from Typescript ([#483](https://github.com/stellar/js-stellar-base/pull/483/files)):
+
+```typescript
+namespace StrKey {
+  function encodeMed25519PublicKey(data: Buffer): string;
+  function decodeMed25519PublicKey(data: string): Buffer;
+  function isValidMed25519PublicKey(publicKey: string): boolean;
+}
+
+function decodeAddressToMuxedAccount(address: string, supportMuxing: boolean): xdr.MuxedAccount;
+function encodeMuxedAccountToAddress(account: xdr.MuxedAccount, supportMuxing: boolean): string;
+function encodeMuxedAccount(gAddress: string, id: string): xdr.MuxedAccount;
+```
+
+- Added a helper function `Transaction.getClaimableBalanceId(int)` which lets you pre-determine the hex claimable balance ID of a `createClaimableBalance` operation prior to submission to the network ([#482](https://github.com/stellar/js-stellar-base/pull/482)).
+
+### Fix
+
+- Add `Buffer` as a parameter type option for the `Keypair` constructor in Typescript ([#484](https://github.com/stellar/js-stellar-base/pull/484)).
+
+
+## [v6.0.6](https://github.com/stellar/js-stellar-base/compare/v6.0.5..v6.0.6)
+
+### Fix
+
+- Upgrades dependencies: `path-parse` (1.0.6 --> 1.0.7) and `jszip` (3.4.0 to 3.7.1) ([#450](https://github.com/stellar/js-stellar-base/pull/450), [#458](https://github.com/stellar/js-stellar-base/pull/458)).
+
+
+## [v6.0.5](https://github.com/stellar/js-stellar-base/compare/v6.0.4..v6.0.5)
+
+This version bump fixes a security vulnerability in a _developer_ dependency; **please upgrade as soon as possible!** You may be affected if you are working on this package in a developer capacity (i.e. you've cloned this repository) and have run `yarn` or `yarn install` any time on Oct 22nd, 2021.
+
+Please refer to the [security advisory](https://github.com/advisories/GHSA-pjwm-rvh2-c87w) for details.
+
+
+### Security Fix
+- Pin `ua-parser-js` to a known safe version ([#477](https://github.com/stellar/js-stellar-base/pull/477)).
+
+
+## [v6.0.4](https://github.com/stellar/js-stellar-base/compare/v6.0.3..v6.0.4)
+
+### Fix
+- Allow muxed accounts when decoding transactions via `TransactionBuilder.fromXDR()` ([#470](https://github.com/stellar/js-stellar-base/pull/470)).
+
+
+## [v6.0.3](https://github.com/stellar/js-stellar-base/compare/v6.0.2..v6.0.3)
+
+### Fix
+- When creating a `Transaction`, forward the optional `withMuxing` flag along to its operations so that their properties are also decoded with the appropriate muxing state ([#469](https://github.com/stellar/js-stellar-base/pull/469)).
+
+
+## [v6.0.2](https://github.com/stellar/js-stellar-base/compare/v6.0.1..v6.0.2)
+
+### Fix
+- Fix Typescript signatures for operations to universally allow setting the `withMuxing` flag ([#466](https://github.com/stellar/js-stellar-base/pull/466)).
+
+
+## [v6.0.1](https://github.com/stellar/js-stellar-base/compare/v5.3.2..v6.0.1)
+
+### Add
+
+- Introduced new CAP-38 operations `LiquidityPoolDepositOp` and `LiquidityPoolWithdrawOp`.
+- Introduced two new types of assets, `LiquidityPoolId` and `LiquidityPoolAsset`.
+
+### Update
+
+- The XDR definitions have been updated to support CAP-38.
+- Extended `Operation` class with the `Operation.revokeLiquidityPoolSponsorship` helper that allows revoking a liquidity pool sponsorship.
+- Asset types now include `AssetType.liquidityPoolShares`.
+- `Operation.changeTrust` and `ChangeTrustOp` can now use `LiquidityPoolAsset` in addition to `Asset`.
+- `Operation.revokeTrustlineSponsorship` can now use `LiquidityPoolId` in addition to `Asset`.
+
+## [v5.3.2](https://github.com/stellar/js-stellar-base/compare/v5.3.1..v5.3.2)
+
+### Fix
+- Update various dependencies to secure versions. Most are developer dependencies which means no or minimal downstream effects ([#446](https://github.com/stellar/js-stellar-base/pull/446), [#447](https://github.com/stellar/js-stellar-base/pull/447), [#392](https://github.com/stellar/js-stellar-base/pull/392), [#428](https://github.com/stellar/js-stellar-base/pull/428)); the only non-developer dependency upgrade is a patch version bump to `lodash` ([#449](https://github.com/stellar/js-stellar-base/pull/449)).
+
+
+## [v5.3.1](https://github.com/stellar/js-stellar-base/compare/v5.3.0..v5.3.1)
+
+### Fix
+- Creating operations with both muxed and unmuxed properties resulted in unintuitive XDR. Specifically, the unmuxed property would be transformed into the equivalent property with an ID of 0 ([#441](https://github.com/stellar/js-stellar-base/pull/441)). 
+
+
+## [v5.3.0](https://github.com/stellar/js-stellar-base/compare/v5.2.1..v5.3.0)
+
+### Add
+- **Opt-in support for muxed accounts.** In addition to the support introduced in [v5.2.0](https://github.com/stellar/js-stellar-base/releases/v5.2.0), this completes support for muxed accounts by enabling them for fee-bump transactions. Pass a muxed account address (in the `M...` form) as the first parameter (and explicitly opt-in to muxing by passing `true` as the last parameter) to `TransactionBuilder.buildFeeBumpTransaction` to make the `feeSource` a fully-muxed account instance ([#434](https://github.com/stellar/js-stellar-base/pull/434)).
+
+
+## [v5.2.1](https://github.com/stellar/js-stellar-base/compare/v5.2.0..v5.2.1)
+
+### Fix
+- Fix regression where raw public keys were [sometimes](https://github.com/stellar/js-stellar-sdk/issues/645) being parsed incorrectly ([#429](https://github.com/stellar/js-stellar-base/pull/429)).
+
+
+## [v5.2.0](https://github.com/stellar/js-stellar-base/compare/v5.1.0..v5.2.0)
+
+### Add
+- **Opt-in support for muxed accounts.** This introduces `M...` addresses from [SEP-23](https://stellar.org/protocol/sep-23), which multiplex a Stellar `G...` address across IDs to eliminate the need for ad-hoc multiplexing via the Transaction.memo field (see the relevant [SEP-29](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0029.md) and [blog post](https://www.stellar.org/developers-blog/fixing-memo-less-payments) on the topic). The following operations now support muxed accounts ([#416](https://github.com/stellar/js-stellar-base/pull/416)):
+  * `Payment.destination`
+  * `PathPaymentStrictReceive.destination`
+  * `PathPaymentStrictSend.destination`
+  * `Operation.sourceAccount`
+  * `AccountMerge.destination`
+  * `Transaction.sourceAccount`
+
+- The above changeset also introduces a new high-level object, `MuxedAccount` (not to be confused with `xdr.MuxedAccount`, which is the underlying raw representation) to make working with muxed accounts easier. You can use it to easily create and manage muxed accounts and their underlying shared `Account`, passing them along to the supported operations and `TransactionBuilder` ([#416](https://github.com/stellar/js-stellar-base/pull/416)):
+
+```js
+  const PUBKEY = 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ';
+  const ACC = new StellarBase.Account(PUBKEY, '1');
+
+  const mux1 = new StellarBase.MuxedAccount(ACC, '1000');
+  console.log(mux1.accountId(), mux1.id());
+  // MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUAAAAAAAAAAD5DTGC 1000
+
+  const mux2 = ACC.createSubaccount('2000');
+  console.log("Parent relationship preserved:", 
+              mux2.baseAccount().accountId() === mux1.baseAccount().accountId());
+  console.log(mux2.accountId(), mux2.id());
+  // MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUAAAAAAAAAAH2B4RU 2000
+
+  mux1.setID('3000');
+  console.log("Underlying account unchanged:", 
+              ACC.accountId() === mux1.baseAccount().accountId());
+  console.log(mux1.accountId(), mux1.id());
+  // MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUAAAAAAAAAALXC5LE 3000
+```
+
+- You can refer to the [documentation](https://stellar.github.io/js-stellar-sdk/MuxedAccount.html) or the [test suite](../test/unit/muxed_account_test.js) for more uses of the API.
+
+### Update
+- Modernize the minimum-supported browser versions for the library ([#419](https://github.com/stellar/js-stellar-base/pull/419)).
+
+### Fix
+- Update Typescript test for `SetOptions` to use authorization flags (e.g. `AuthRequiredFlag`) correctly ([#418](https://github.com/stellar/js-stellar-base/pull/418)).
+
 
 ## [v5.1.0](https://github.com/stellar/js-stellar-base/compare/v5.0.0..v5.1.0)
 

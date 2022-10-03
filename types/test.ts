@@ -4,7 +4,10 @@ const masterKey = StellarSdk.Keypair.master(StellarSdk.Networks.TESTNET); // $Ex
 const sourceKey = StellarSdk.Keypair.random(); // $ExpectType Keypair
 const destKey = StellarSdk.Keypair.random();
 const usd = new StellarSdk.Asset('USD', 'GDGU5OAPHNPU5UCLE5RDJHG7PXZFQYWKCFOEXSXNMR6KRQRI5T6XXCD7'); // $ExpectType Asset
-const account = new StellarSdk.Account(sourceKey.publicKey(), '1');
+const account = new StellarSdk.Account(sourceKey.publicKey(), '1'); // $ExpectType Account
+const muxedAccount = new StellarSdk.MuxedAccount(account, '123'); // $ExpectType MuxedAccount
+const muxedConforms = muxedAccount as StellarSdk.Account; // $ExpectType Account
+
 const transaction = new StellarSdk.TransactionBuilder(account, {
   fee: "100",
   networkPassphrase: StellarSdk.Networks.TESTNET
@@ -12,10 +15,17 @@ const transaction = new StellarSdk.TransactionBuilder(account, {
   .addOperation(
     StellarSdk.Operation.beginSponsoringFutureReserves({
       sponsoredId: account.accountId(),
-      source: masterKey.publicKey()
+      source: masterKey.publicKey(),
     })
   ).addOperation(
     StellarSdk.Operation.accountMerge({ destination: destKey.publicKey() }),
+  ).addOperation(
+    StellarSdk.Operation.payment({
+      source: account.accountId(),
+      destination: muxedAccount.accountId(),
+      amount: "100",
+      asset: usd,
+    })
   ).addOperation(
     StellarSdk.Operation.createClaimableBalance({
       amount: "10",
@@ -55,6 +65,10 @@ const transaction = new StellarSdk.TransactionBuilder(account, {
   ).addOperation(
     StellarSdk.Operation.revokeClaimableBalanceSponsorship({
       balanceId: "00000000da0d57da7d4850e7fc10d2a9d0ebc731f7afb40574c03395b17d49149b91f5be",
+    })
+  ).addOperation(
+    StellarSdk.Operation.revokeLiquidityPoolSponsorship({
+      liquidityPoolId: "dd7b1ab831c273310ddbec6f97870aa83c2fbd78ce22aded37ecbf4f3380fac7",
     })
   ).addOperation(
     StellarSdk.Operation.revokeSignerSponsorship({
@@ -106,12 +120,33 @@ const transaction = new StellarSdk.TransactionBuilder(account, {
       },
     })
   ).addOperation(
+    StellarSdk.Operation.liquidityPoolDeposit({
+      liquidityPoolId: "dd7b1ab831c273310ddbec6f97870aa83c2fbd78ce22aded37ecbf4f3380fac7",
+      maxAmountA: "10000",
+      maxAmountB: "20000",
+      minPrice: "0.45",
+      maxPrice: "0.55",
+    })
+  ).addOperation(
+    StellarSdk.Operation.liquidityPoolWithdraw({
+      liquidityPoolId: "dd7b1ab831c273310ddbec6f97870aa83c2fbd78ce22aded37ecbf4f3380fac7",
+      amount: "100",
+      minAmountA: "10000",
+      minAmountB: "20000",
+    })
+  ).addOperation(
     StellarSdk.Operation.setOptions({
-      setFlags:   StellarSdk.AuthFlag.immutable | StellarSdk.AuthFlag.required,
-      clearFlags: StellarSdk.AuthFlag.revocable | StellarSdk.AuthFlag.clawbackEnabled
+      setFlags:   (StellarSdk.AuthImmutableFlag | StellarSdk.AuthRequiredFlag) as StellarSdk.AuthFlag,
+      clearFlags: (StellarSdk.AuthRevocableFlag | StellarSdk.AuthClawbackEnabledFlag) as StellarSdk.AuthFlag,
     })
   ).addMemo(new StellarSdk.Memo(StellarSdk.MemoText, 'memo'))
   .setTimeout(5)
+  .setTimebounds(Date.now(), Date.now() + 5000)
+  .setLedgerbounds(5, 10)
+  .setMinAccountSequence("5")
+  .setMinAccountSequenceAge(5)
+  .setMinAccountSequenceLedgerGap(5)
+  .setExtraSigners([sourceKey.publicKey()])
   .build(); // $ExpectType () => Transaction<Memo<MemoType>, Operation[]>
 
 const transactionFromXDR = new StellarSdk.Transaction(transaction.toEnvelope(), StellarSdk.Networks.TESTNET); // $ExpectType Transaction<Memo<MemoType>, Operation[]>
@@ -266,3 +301,50 @@ const trust = StellarSdk.xdr.SetTrustLineFlagsOp.fromXDR(
   'base64'
 );
 trust; // $ExpectType SetTrustLineFlagsOp
+
+const lpDeposit = StellarSdk.xdr.LiquidityPoolDepositOp.fromXDR(
+  // tslint:disable:max-line-length
+  '3XsauDHCczEN2+xvl4cKqDwvvXjOIq3tN+y/TzOA+scAAAAABfXhAAAAAAAL68IAAAAACQAAABQAAAALAAAAFA==',
+  'base64'
+);
+lpDeposit; // $ExpectType LiquidityPoolDepositOp
+
+const lpWithdraw = StellarSdk.xdr.LiquidityPoolWithdrawOp.fromXDR(
+  // tslint:disable:max-line-length
+  '3XsauDHCczEN2+xvl4cKqDwvvXjOIq3tN+y/TzOA+scAAAAAAvrwgAAAAAAF9eEAAAAAAAvrwgA=',
+  'base64'
+);
+lpWithdraw; // $ExpectType LiquidityPoolWithdrawOp
+
+const pubkey = masterKey.rawPublicKey(); // $ExpectType Buffer
+const seckey = masterKey.rawSecretKey(); // $ExpectType Buffer
+const muxed = StellarSdk.encodeMuxedAccount(masterKey.publicKey(), '1'); // $ExpectType MuxedAccount
+const muxkey = muxed.toXDR("raw"); // $ExpectType Buffer
+
+let result = StellarSdk.StrKey.encodeEd25519PublicKey(pubkey);  // $ExpectType string
+StellarSdk.StrKey.decodeEd25519PublicKey(result);               // $ExpectType Buffer
+StellarSdk.StrKey.isValidEd25519PublicKey(result);              // $ExpectType boolean
+
+result = StellarSdk.StrKey.encodeEd25519SecretSeed(seckey); // $ExpectType string
+StellarSdk.StrKey.decodeEd25519SecretSeed(result);          // $ExpectType Buffer
+StellarSdk.StrKey.isValidEd25519SecretSeed(result);         // $ExpectType boolean
+
+result = StellarSdk.StrKey.encodeMed25519PublicKey(muxkey);   // $ExpectType string
+StellarSdk.StrKey.decodeMed25519PublicKey(result);            // $ExpectType Buffer
+StellarSdk.StrKey.isValidMed25519PublicKey(result);           // $ExpectType boolean
+
+result = StellarSdk.StrKey.encodeSignedPayload(pubkey);   // $ExpectType string
+StellarSdk.StrKey.decodeSignedPayload(result);            // $ExpectType Buffer
+StellarSdk.StrKey.isValidSignedPayload(result);           // $ExpectType boolean
+
+const muxedAddr = StellarSdk.encodeMuxedAccountToAddress(muxed, true);  // $ExpectType string
+StellarSdk.decodeAddressToMuxedAccount(muxedAddr, true);                // $ExpectType MuxedAccount
+
+const sk = StellarSdk.xdr.SignerKey.signerKeyTypeEd25519SignedPayload(
+  new StellarSdk.xdr.SignerKeyEd25519SignedPayload({
+    ed25519: sourceKey.rawPublicKey(),
+    payload: Buffer.alloc(1)
+  })
+);
+StellarSdk.SignerKey.encodeSignerKey(sk);                   // $ExpectType string
+StellarSdk.SignerKey.decodeAddress(sourceKey.publicKey());  // $ExpectType SignerKey

@@ -1,4 +1,5 @@
 import { isValidDate } from '../../src/transaction_builder.js';
+import { encodeMuxedAccountToAddress } from '../../src/util/decode_encode_muxed_account.js';
 
 describe('TransactionBuilder', function() {
   describe('constructs a native payment transaction with one operation', function() {
@@ -600,7 +601,7 @@ describe('TransactionBuilder', function() {
         sourceAccountEd25519: sourceAccountEd25519,
         fee: v1Tx.fee(),
         seqNum: v1Tx.seqNum(),
-        timeBounds: v1Tx.timeBounds(),
+        timeBounds: v1Tx.cond().timeBounds(),
         memo: v1Tx.memo(),
         operations: v1Tx.operations(),
         ext: new StellarBase.xdr.TransactionV0Ext(0)
@@ -660,6 +661,159 @@ describe('TransactionBuilder', function() {
       );
       expect(tx).to.be.an.instanceof(StellarBase.Transaction);
       expect(tx.toXDR()).to.equal(xdr);
+    });
+  });
+
+  describe('muxed account support', function() {
+    // Simultaneously, let's test some of the operations that should support
+    // muxed accounts.
+    const asset = StellarBase.Asset.native();
+    const amount = '1000.0000000';
+
+    const base = new StellarBase.Account(
+      'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ',
+      '1234'
+    );
+    const source = new StellarBase.MuxedAccount(base, '2');
+    const destination = new StellarBase.MuxedAccount(base, '3').accountId();
+
+    const PUBKEY_SRC = StellarBase.StrKey.decodeEd25519PublicKey(
+      source.baseAccount().accountId()
+    );
+    const MUXED_SRC_ID = StellarBase.xdr.Uint64.fromString(source.id());
+    const networkPassphrase = 'Standalone Network ; February 2017';
+    const signer = StellarBase.Keypair.master(StellarBase.Networks.TESTNET);
+
+    it('works with muxed accounts by default', function() {
+      const operations = [
+        StellarBase.Operation.payment({
+          source: source.accountId(),
+          destination: destination,
+          amount: amount,
+          asset: asset
+        }),
+        StellarBase.Operation.clawback({
+          source: source.baseAccount().accountId(),
+          from: destination,
+          amount: amount,
+          asset: asset
+        })
+      ];
+
+      let builder = new StellarBase.TransactionBuilder(source, {
+        fee: '100',
+        timebounds: { minTime: 0, maxTime: 0 },
+        memo: new StellarBase.Memo(
+          StellarBase.MemoText,
+          'Testing muxed accounts'
+        ),
+        networkPassphrase: networkPassphrase
+      });
+
+      operations.forEach((op) => builder.addOperation(op));
+
+      let tx = builder.build();
+      tx.sign(signer);
+
+      const envelope = tx.toEnvelope();
+      const xdrTx = envelope.value().tx();
+
+      const rawMuxedSourceAccount = xdrTx.sourceAccount();
+
+      expect(rawMuxedSourceAccount.switch()).to.equal(
+        StellarBase.xdr.CryptoKeyType.keyTypeMuxedEd25519()
+      );
+
+      const innerMux = rawMuxedSourceAccount.med25519();
+      expect(innerMux.ed25519()).to.eql(PUBKEY_SRC);
+      expect(encodeMuxedAccountToAddress(rawMuxedSourceAccount)).to.equal(
+        source.accountId()
+      );
+      expect(innerMux.id()).to.eql(MUXED_SRC_ID);
+
+      expect(source.sequenceNumber()).to.equal('1235');
+      expect(source.baseAccount().sequenceNumber()).to.equal('1235');
+
+      // it should decode muxed properties by default
+      let decodedTx = StellarBase.TransactionBuilder.fromXDR(
+        tx.toXDR('base64'),
+        networkPassphrase
+      );
+      expect(decodedTx.source).to.equal(source.accountId());
+
+      let paymentOp = decodedTx.operations[0];
+      expect(paymentOp.destination).to.equal(destination);
+      expect(paymentOp.source).to.equal(source.accountId());
+
+      // and unmuxed where appropriate
+      let clawbackOp = decodedTx.operations[1];
+      expect(clawbackOp.source).to.equal(source.baseAccount().accountId());
+      expect(clawbackOp.from).to.equal(destination);
+    });
+
+    it('does not regress js-stellar-sdk#646', function() {
+      expect(() => {
+        StellarBase.TransactionBuilder.fromXDR(
+          'AAAAAgAAAABg/GhKJU5ut52ih6Klx0ymGvsac1FPJig1CHYqyesIHQAAJxACBmMCAAAADgAAAAAAAAABAAAAATMAAAAAAAABAAAAAQAAAABg/GhKJU5ut52ih6Klx0ymGvsac1FPJig1CHYqyesIHQAAAAAAAAAAqdkSiA5dzNXstOtkPkHd6dAMPMA+MSXwK8OlrAGCKasAAAAAAcnDgAAAAAAAAAAByesIHQAAAEAuLrTfW6D+HYlUD9y+JolF1qrb40hIRATzsQaQjchKJuhOZJjLO0d7oaTD3JZ4UL4vVKtV7TvV17rQgCQnuz8F',
+          'Public Global Stellar Network ; September 2015'
+        );
+      }).to.not.throw();
+    });
+
+    it('works with fee-bump transactions', function() {
+      // We create a non-muxed transaction, then fee-bump with a muxed source.
+      let builder = new StellarBase.TransactionBuilder(source.baseAccount(), {
+        fee: '100',
+        timebounds: { minTime: 0, maxTime: 0 },
+        networkPassphrase: networkPassphrase
+      });
+
+      const muxed = new StellarBase.MuxedAccount.fromAddress(destination, '0');
+      const gAddress = muxed.baseAccount().accountId();
+      builder.addOperation(
+        StellarBase.Operation.payment({
+          source: source.baseAccount().accountId(),
+          destination: gAddress,
+          amount: amount,
+          asset: asset
+        })
+      );
+
+      let tx = builder.build();
+      tx.sign(signer);
+
+      const feeTx = StellarBase.TransactionBuilder.buildFeeBumpTransaction(
+        source.accountId(),
+        '1000',
+        tx,
+        networkPassphrase
+      );
+
+      expect(feeTx).to.be.an.instanceof(StellarBase.FeeBumpTransaction);
+      const envelope = feeTx.toEnvelope();
+      const xdrTx = envelope.value().tx();
+
+      const rawFeeSource = xdrTx.feeSource();
+
+      expect(rawFeeSource.switch()).to.equal(
+        StellarBase.xdr.CryptoKeyType.keyTypeMuxedEd25519()
+      );
+
+      const innerMux = rawFeeSource.med25519();
+      expect(innerMux.ed25519()).to.eql(PUBKEY_SRC);
+      expect(encodeMuxedAccountToAddress(rawFeeSource)).to.equal(
+        source.accountId()
+      );
+      expect(innerMux.id()).to.eql(MUXED_SRC_ID);
+
+      const decodedTx = StellarBase.TransactionBuilder.fromXDR(
+        feeTx.toXDR('base64'),
+        networkPassphrase
+      );
+      expect(decodedTx.feeSource).to.equal(source.accountId());
+      expect(decodedTx.innerTransaction.operations[0].source).to.equal(
+        source.baseAccount().accountId()
+      );
     });
   });
 });
