@@ -2,7 +2,7 @@
   "name": "stellar-base",
   "version": "8.2.1",
   "description": "Low level stellar support library",
-  "main": "./lib/index.js",
+  "main": "./src/index.js",
   "types": "./types/index.d.ts",
   "scripts": {
     "test": "gulp test:node",
