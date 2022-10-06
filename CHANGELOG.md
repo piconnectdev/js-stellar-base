@@ -4,6 +4,13 @@
 ## Unreleased
 
 
+## [v8.2.1](https://github.com/stellar/js-stellar-base/compare/v8.2.0..v8.2.1)
+
+### Fix
+
+* Turn all XLM-like (i.e. casing agnostic) asset codes into the native asset with code `XLM` ([#546](https://github.com/stellar/js-stellar-base/pull/546)).
+
+
 ## [v8.2.0](https://github.com/stellar/js-stellar-base/compare/v8.1.0..v8.2.0)
 
 ### Add
